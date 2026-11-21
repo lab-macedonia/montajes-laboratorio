@@ -2704,17 +2704,6 @@ function animSVG(ph){
       s+=`<rect x="${F(p.x-w/2)}" y="${F(p.y-h/2)}" width="${F(w)}" height="${F(h)}" rx="${F(h/2)}" fill="${col}" fill-opacity="${a.toFixed(2)}"/>`;
     });
   });
-  /* cromatografía en capa fina: el eluyente sube por la placa y arrastra las manchas */
-  its.filter(i=>i.def==='camara'&&i.fill>.05).forEach(c=>{
-    const cb=worldBBox(c),fo=Math.min(1,ph/.08,(1-ph)/.12);
-    its.filter(p=>p.def==='placatlc'&&inB({x:p.x,y:p.y},cb,0)).forEach(p=>{
-      const yf=34-62*(.12+.88*ph),q=[[-12,34],[12,34],[12,yf],[-12,yf]].map(([x,y])=>wptRaw(p,x,y));
-      s+=`<polygon points="${q.map(z=>F(z.x)+','+F(z.y)).join(' ')}" fill="#4aa3df" fill-opacity="${(.26*fo).toFixed(2)}"/>`;
-      [[-6,.38,'#7a3db8'],[0,.62,'#2d8a4e'],[6,.92,'#d6892a']].forEach(([x,f,col])=>{
-        const z=wptRaw(p,x,34-(34-yf)*f-3);s+=dot(z.x,z.y,2.6*p.s,col,.9*fo);
-      });
-    });
-  });
   /* pila galvánica: los electrones van del ánodo al cátodo por los cables y los iones cruzan el puente */
   {
     const pu=its.find(i=>i.def==='puente'&&i.fill>.05),vm=its.find(i=>i.def==='voltimetro');
@@ -2738,12 +2727,13 @@ function animSVG(ph){
       }
     }
   }
-  /* TLC: las placas fuera de la cámara repiten el desarrollo: el frente sube y las manchas avanzan */
-  its.filter(p=>p.def==='placatlc'&&p.fill>.05&&!its.some(c=>c.def==='camara'&&inB({x:p.x,y:p.y},worldBBox(c),0))).forEach(p=>{
+  /* TLC: las placas repiten el desarrollo (también dentro de la cámara): el frente sube y las manchas avanzan */
+  its.filter(p=>p.def==='placatlc'&&p.fill>.05).forEach(p=>{
+    const inCh=its.some(c=>c.def==='camara'&&inB({x:p.x,y:p.y},worldBBox(c),0));
     const dist=p.fill*52,fo=Math.min(1,ph/.07,(1-ph)/.1),g=Math.min(1,ph/.8),cur=20-dist*g,fin=20-dist;
     const poly=(y0,y1,col,o)=>{const q=[[-12,y0],[12,y0],[12,y1],[-12,y1]].map(([x,y])=>wptRaw(p,x,y));return `<polygon points="${q.map(z=>F(z.x)+','+F(z.y)).join(' ')}" fill="${col}" fill-opacity="${o.toFixed(2)}"/>`};
     const ln=y=>{const a=wptRaw(p,-12,y),b=wptRaw(p,12,y);return `<line x1="${F(a.x)}" y1="${F(a.y)}" x2="${F(b.x)}" y2="${F(b.y)}" stroke="#7d8a82" stroke-width="1" stroke-dasharray="2 2" vector-effect="non-scaling-stroke" stroke-opacity="${fo.toFixed(2)}"/>`};
-    s+=poly(fin-3,35,'#f3f4ec',fo)+poly(cur,35,'#dfe5d3',fo)+ln(cur)+ln(20);
+    s+=poly(-35,35,'#f3f4ec',fo)+poly(cur,35,inCh?'#cbe3f1':'#dfe5d3',fo)+ln(cur)+ln(20);
     [[-6.5,.28,'#7b2d9b'],[0,.5,'#2f7fd6'],[6.5,.82,'#d6403a']].forEach(([x,rf,c])=>{const z=wptRaw(p,x,20-rf*dist*g);s+=dot(z.x,z.y,3.1*p.s,c,.9*fo,0)});
   });
   /* electrólisis: burbujas en el ánodo y migración o depósito en el cátodo */
