@@ -1227,7 +1227,7 @@ const sJuntas=e=>[
 
 const sBano=e=>[
   I('mesa',300,576),...when(!e,[I('soporte',275.5,462,{s:1.2})]),I('placa',300,520,{fill:.5}),
-  I('beaker',300,470,{fill:.7,color:'#9fd3f0'}),...when(!e,[I('barra',338,516)]),I('tubo',300,e?395:455,{fill:.35,color:'#f2d338'}),I('termometro',335,435,{fill:.45}),...when(e,[I('tapon',300,337)]),
+  I('beaker',300,470,{fill:.7,color:'#9fd3f0'}),...when(!e,[I('barra',324,519)]),I('tubo',300,e?395:455,{fill:.35,color:'#f2d338'}),I('termometro',335,435,{fill:.45}),...when(e,[I('tapon',300,337)]),
   ...when(!e,[T(300,200,'Baño María',26),T(470,455,'Agua caliente',15),L(420,455,352,470),T(480,330,'Tubo con la\nmuestra',15),L(430,334,320,420)])];
 
 const RG=k=>({reag:k,label:REAG[k].n,ghs:REAG[k].ghs.slice()});
