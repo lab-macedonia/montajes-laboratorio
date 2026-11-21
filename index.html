@@ -2433,15 +2433,15 @@ function layoutAnnot(){
   lastAnnotSig=sig;annot={};lastAnnot=annot;
   const live=doc.items.filter(i=>!i.hid&&i.def!=='__line'&&i.def!=='__text'&&(i.label||(i.ghs&&i.ghs.length)));
   if(!live.length)return;
-  const obst=doc.items.filter(i=>!i.hid&&i.def!=='__line').map(i=>({id:i.id,mesa:i.def==='mesa',b:worldBBox(i)}));
+  const obst=doc.items.filter(i=>!i.hid&&i.def!=='__line').map(i=>({id:i.id,mesa:i.def==='mesa',nb:!!(DEFS[i.def]&&DEFS[i.def].nobox),b:worldBBox(i)}));
   const placed=[],hosePts=[];
   doc.items.forEach(l=>{if(l.def!=='__line'||l.hid||l.w<4)return;
     for(let k=0;k<=28;k++){const t=k/28;let x,y;
       if(l.cx!=null){const u=1-t;x=u*u*l.x1+2*u*t*l.cx+t*t*l.x2;y=u*u*l.y1+2*u*t*l.cy+t*t*l.y2}else{x=l.x1+(l.x2-l.x1)*t;y=l.y1+(l.y2-l.y1)*t}
       hosePts.push({x,y})}});
-  const hit=(r,own)=>{
+  const hit=(r,own,skipNb)=>{
     for(const q of hosePts)if(q.x>r.x-4&&q.x<r.x+r.w+4&&q.y>r.y-4&&q.y<r.y+r.h+4)return true;
-    for(const o of obst){if(o.id===own)continue;const b=o.b;if(r.x<b.x1-3&&r.x+r.w>b.x0+3&&r.y<b.y1-3&&r.y+r.h>b.y0+3)return true}
+    for(const o of obst){if(o.id===own||(skipNb&&o.nb))continue;const b=o.b;if(r.x<b.x1-3&&r.x+r.w>b.x0+3&&r.y<b.y1-3&&r.y+r.h>b.y0+3)return true}
     for(const p of placed)if(r.x<p.x+p.w+3&&r.x+r.w>p.x-3&&r.y<p.y+p.h+3&&r.y+r.h>p.y-3)return true;
     return false;
   };
@@ -2480,8 +2480,8 @@ function layoutAnnot(){
     const n=(it.ghs||[]).filter(c=>has(GHS,c)).length;if(!n||it.go)return;
     let r=null;
     const under=q=>mesas.some(m=>q.y>=m.b.y0&&q.x<m.b.x1&&q.x+q.w>m.b.x0);
-    const sb=worldBBox(it),scx=(sb.x0+sb.x1)/2,scy=(sb.y0+sb.y1)/2,sp=spots(it,36,n*36,true).map((p,i)=>({p,i,d:Math.hypot(p.x+18-scx,p.y+n*18-scy)})).sort((u,v)=>u.d-v.d||u.i-v.i).map(o=>o.p);
-    for(const pad of [10,0]){if(r)break;for(const p of sp){const q={x:p.x,y:p.y,w:36,h:n*36,v:true};if(!hit({x:q.x-pad,y:q.y-pad,w:q.w+2*pad,h:q.h+2*pad},it.id)&&!under(q)){r=q;break}}}
+    const sb=worldBBox(it),scx=(sb.x0+sb.x1)/2,scy=(sb.y0+sb.y1)/2,sp=spots(it,36,n*36,true).concat((()=>{const g=[];for(let dx=-320;dx<=320;dx+=12)for(let dy=-320;dy<=320;dy+=12)g.push({x:scx+dx-18,y:scy+dy-n*18});return g})()).map((p,i)=>({p,i,d:Math.hypot(p.x+18-scx,p.y+n*18-scy)})).sort((u,v)=>u.d-v.d||u.i-v.i).map(o=>o.p);
+    for(const [pad,skip] of [[10,false],[0,false],[10,true],[0,true]]){if(r)break;for(const p of sp){const q={x:p.x,y:p.y,w:36,h:n*36,v:true};if(!hit({x:q.x-pad,y:q.y-pad,w:q.w+2*pad,h:q.h+2*pad},it.id,skip)&&!under(q)){r=q;break}}}
     if(!r){
       /* sin hueco en los lugares habituales: busca el sitio libre más cercano alrededor de la pieza */
       const bb=worldBBox(it),ccx=(bb.x0+bb.x1)/2,ccy=(bb.y0+bb.y1)/2;let best=null;
@@ -2738,6 +2738,14 @@ function animSVG(ph){
       }
     }
   }
+  /* TLC: las placas fuera de la cámara repiten el desarrollo: el frente sube y las manchas avanzan */
+  its.filter(p=>p.def==='placatlc'&&p.fill>.05&&!its.some(c=>c.def==='camara'&&inB({x:p.x,y:p.y},worldBBox(c),0))).forEach(p=>{
+    const dist=p.fill*52,fo=Math.min(1,ph/.07,(1-ph)/.1),g=Math.min(1,ph/.8),cur=20-dist*g,fin=20-dist;
+    const poly=(y0,y1,col,o)=>{const q=[[-12,y0],[12,y0],[12,y1],[-12,y1]].map(([x,y])=>wptRaw(p,x,y));return `<polygon points="${q.map(z=>F(z.x)+','+F(z.y)).join(' ')}" fill="${col}" fill-opacity="${o.toFixed(2)}"/>`};
+    const ln=y=>{const a=wptRaw(p,-12,y),b=wptRaw(p,12,y);return `<line x1="${F(a.x)}" y1="${F(a.y)}" x2="${F(b.x)}" y2="${F(b.y)}" stroke="#7d8a82" stroke-width="1" stroke-dasharray="2 2" vector-effect="non-scaling-stroke" stroke-opacity="${fo.toFixed(2)}"/>`};
+    s+=poly(fin-3,35,'#f3f4ec',fo)+poly(cur,35,'#dfe5d3',fo)+ln(cur)+ln(20);
+    [[-6.5,.28,'#7b2d9b'],[0,.5,'#2f7fd6'],[6.5,.82,'#d6403a']].forEach(([x,rf,c])=>{const z=wptRaw(p,x,20-rf*dist*g);s+=dot(z.x,z.y,3.1*p.s,c,.9*fo,0)});
+  });
   /* electrólisis: burbujas en el ánodo y migración o depósito en el cátodo */
   {
     const fu=its.find(i=>i.def==='fuente'&&i.fill>.05),bk=fu&&its.find(i=>i.def==='beaker'&&i.el&&i.fill>.05);
@@ -2748,14 +2756,14 @@ function animSVG(ph){
         its.filter(e=>e.def==='electrodo'&&inB({x:e.x,y:e.y},bb,30)).forEach(e=>{
           const tip=wptRaw(e,0,66),top=wptRaw(e,0,-90);if(tip.y<surf+6)return;
           const anode=wires.some(l=>Math.min(Math.hypot(l.x1-top.x,l.y1-top.y),Math.hypot(l.x2-top.x,l.y2-top.y))<45);
-          const dep=bk.el==='cuso4',yb=Math.max(surf+4,tip.y-70*e.s);
+          const dep=bk.el==='cuso4',yb=Math.max(surf+4,tip.y-70*e.s),cx=v=>Math.min(bb.x1-9,Math.max(bb.x0+9,v)),cy=v=>Math.min(bb.y1-8,Math.max(surf+3,v));
           if(anode||!dep){
             const n=anode?6:(bk.el==='h2o'?9:5),brown=anode&&bk.el==='ki';
             for(let k=0;k<n;k++){const t=(ph*(1+(k%2))+k/n)%1,x=e.x+((k%3)-1)*5+Math.sin((t+k)*T2)*2,y=lerp(tip.y-8,surf+3,t);
-              s+=dot(x,y,1.6+(k%3)*.5+t*1.2,brown?'#8a5a2b':'#fff',brown?.6:.9*(1-t*.5),1)}
+              s+=dot(cx(x),cy(y),1.6+(k%3)*.5+t*1.2,brown?'#8a5a2b':'#fff',brown?.6:.9*(1-t*.5),1)}
           }else{
             for(let k=0;k<5;k++){const t=(ph+k/5)%1,sd=k%2?1:-1,x=e.x+sd*lerp(26,7,t),y=lerp(yb+6,tip.y-12,((k*.37)+.2)%1);
-              s+=dot(x,y,2.1,'#b87333',.9*fade(t),1)}
+              s+=dot(cx(x),cy(y),2.1,'#b87333',.9*fade(t),1)}
           }
         });
       }
