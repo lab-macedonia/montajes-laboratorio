@@ -1,6 +1,6 @@
 # Montajes de laboratorio
 
-Editor web para dibujar montajes de material de vidrio de laboratorio de química (tipo Chemix), con revisión automática en "modo actividad", pictogramas SGA oficiales, animación y exportación (SVG/PNG/GIF), informes para docentes y modo evaluación.
+Editor web para dibujar montajes de material de vidrio de laboratorio de química, con revisión automática en "modo actividad", pictogramas SGA oficiales, animación y exportación (SVG/PNG/GIF), informes para docentes y modo evaluación.
 
 Es una sola página (`index.html`), sin dependencias ni servidor: HTML, CSS y JavaScript puros, con las fuentes incrustadas. Funciona sin conexión.
 
