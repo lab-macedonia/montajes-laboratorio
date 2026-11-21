@@ -41,6 +41,7 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
 .bar{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:6}
+.langsw{font-size:12px;color:inherit;border:1px solid currentColor;border-radius:10px;padding:1px 8px;margin-right:6px;text-decoration:none;opacity:.8}.langsw:hover,.langsw:focus-visible{opacity:1;text-decoration:underline}
 .brand{font-weight:600;font-size:15px;letter-spacing:.01em;margin-right:4px}
 .seg{display:flex;gap:2px;background:var(--chip);padding:2px;border-radius:9px}
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;background:transparent;border-radius:7px;padding:6px 9px;min-height:34px}
@@ -209,7 +210,7 @@ details.cfg summary{cursor:pointer;font-size:13px;color:var(--mut)}
 </head>
 <body>
 <header class="bar">
-  <span class="brand"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="vertical-align:-4px;margin-right:7px;fill:none;stroke:var(--acc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4A1.5 1.5 0 0 0 19.5 19L14 9V3"/><path d="M7.5 15h9" stroke-opacity=".7"/></svg>Montajes de laboratorio</span>
+  <span class="brand"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="vertical-align:-4px;margin-right:7px;fill:none;stroke:var(--acc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4A1.5 1.5 0 0 0 19.5 19L14 9V3"/><path d="M7.5 15h9" stroke-opacity=".7"/></svg>Montajes de laboratorio</span><a class="langsw" href="en/" hreflang="en" lang="en" title="English version">English</a>
   <div class="seg" role="group" aria-label="Herramientas">
     <button class="btn" id="t-select" aria-pressed="true" title="Seleccionar y mover"><svg viewBox="0 0 24 24"><path d="M5 3l12 7-5 1.5L9.5 17z"/></svg><span class="lbl">Mover</span></button>
     <button class="btn" id="t-text" aria-pressed="false" title="Agregar texto"><svg viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg><span class="lbl">Texto</span></button>
@@ -2660,6 +2661,108 @@ function animSVG(ph){
     s+=`<circle cx="${p.x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${color}" fill-opacity="${o.toFixed(2)}" stroke="#1c2b36" stroke-opacity="${(.5*o).toFixed(2)}" stroke-width="1"/>`}};
   its.filter(i=>['bureta','decantacion','adicion'].includes(i.def)&&i.fill>.05).forEach(i=>drip(wpt(i,'tip'),i.two?i.color2:i.color));
   if(heated.length)its.filter(i=>i.def==='alargadera').forEach(i=>drip(wpt(i,'drop'),'#cfe9f7'));
+  /* ---- v20: filtración, vacío, cromatografía, pila, electrólisis, rotavapor, Thiele y llama ---- */
+  {
+  const T2=Math.PI*2,lerp=(a,b,t)=>a+(b-a)*t,F=n=>n.toFixed(1);
+  const dot=(x,y,r,fill,op,stroke)=>`<circle cx="${F(x)}" cy="${F(y)}" r="${r.toFixed(2)}" fill="${fill}" fill-opacity="${op.toFixed(2)}"${stroke?` stroke="#1c2b36" stroke-opacity="${(op*.4).toFixed(2)}" stroke-width=".7"`:''}/>`;
+  const qpt=(l,t)=>l.cx!=null?{x:(1-t)*(1-t)*l.x1+2*(1-t)*t*l.cx+t*t*l.x2,y:(1-t)*(1-t)*l.y1+2*(1-t)*t*l.cy+t*t*l.y2}:{x:lerp(l.x1,l.x2,t),y:lerp(l.y1,l.y2,t)};
+  const walk=(pts,t,closed)=>{const n=closed?pts.length:pts.length-1,u=(((t%1)+1)%1)*n,i=Math.floor(u),f=u-i,a=pts[i%pts.length],b=pts[(i+1)%pts.length];return{x:lerp(a.x,b.x,f),y:lerp(a.y,b.y,f)}};
+  const fade=t=>Math.sin(Math.min(1,Math.max(0,t))*Math.PI);
+  /* mangueras de vacío: el aire fluye hacia la bomba */
+  const pumps=its.filter(i=>i.def==='bomba');
+  if(pumps.length)doc.items.filter(l=>l.def==='__line'&&l.w>=4&&l.arrow!=='end').forEach(l=>{
+    const nips=pumps.map(p=>wpt(p,'nip')),dd=(x,y)=>Math.min(...nips.map(q=>Math.hypot(q.x-x,q.y-y)));
+    const d1=dd(l.x1,l.y1),d2=dd(l.x2,l.y2);if(Math.min(d1,d2)>60)return;
+    const d=`M${l.x1} ${l.y1}${l.cx!=null?`Q${l.cx} ${l.cy} `:'L'}${l.x2} ${l.y2}`;
+    s+=`<path d="${d}" fill="none" stroke="#9fb3c0" stroke-opacity=".9" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="2 12" stroke-dashoffset="${((d2<d1?-1:1)*ph*14).toFixed(2)}"/>`;
+  });
+  /* embudos: el filtrado gotea por el vástago; columnas: el eluyente gotea por la punta */
+  its.filter(i=>['embudo','buchnerf'].includes(i.def)&&i.fill>.05).forEach(f=>drip(wpt(f,'stem'),f.color||'#cfe9f7'));
+  its.filter(i=>i.def==='columna'&&i.fill>.05).forEach(c=>{
+    drip(wpt(c,'tip'),'#8fc3e8');
+    const top=60-c.fill*150;
+    [['#e0a030',1,.0],['#3f9b6b',1,.38]].forEach(([col,r,o],k)=>{
+      const t=((ph*r+o)%1),y=lerp(top+6,52,t),a=fade(t)*.75,p=wptRaw(c,0,y),w=(k?20:24)*c.s,h=(k?6:8)*c.s;
+      s+=`<rect x="${F(p.x-w/2)}" y="${F(p.y-h/2)}" width="${F(w)}" height="${F(h)}" rx="${F(h/2)}" fill="${col}" fill-opacity="${a.toFixed(2)}"/>`;
+    });
+  });
+  /* cromatografía en capa fina: el eluyente sube por la placa y arrastra las manchas */
+  its.filter(i=>i.def==='camara'&&i.fill>.05).forEach(c=>{
+    const cb=worldBBox(c),fo=Math.min(1,ph/.08,(1-ph)/.12);
+    its.filter(p=>p.def==='placatlc'&&inB({x:p.x,y:p.y},cb,0)).forEach(p=>{
+      const yf=34-62*(.12+.88*ph),q=[[-12,34],[12,34],[12,yf],[-12,yf]].map(([x,y])=>wptRaw(p,x,y));
+      s+=`<polygon points="${q.map(z=>F(z.x)+','+F(z.y)).join(' ')}" fill="#4aa3df" fill-opacity="${(.26*fo).toFixed(2)}"/>`;
+      [[-6,.38,'#7a3db8'],[0,.62,'#2d8a4e'],[6,.92,'#d6892a']].forEach(([x,f,col])=>{
+        const z=wptRaw(p,x,34-(34-yf)*f-3);s+=dot(z.x,z.y,2.6*p.s,col,.9*fo);
+      });
+    });
+  });
+  /* pila galvánica: los electrones van del ánodo al cátodo por los cables y los iones cruzan el puente */
+  {
+    const pu=its.find(i=>i.def==='puente'&&i.fill>.05),vm=its.find(i=>i.def==='voltimetro');
+    if(pu&&vm){
+      let cat=null;
+      doc.items.filter(l=>l.def==='__line'&&l.arrow==='none'&&l.w>=3).forEach(l=>{
+        const a=Math.hypot(l.x1-vm.x,l.y1-vm.y),b=Math.hypot(l.x2-vm.x,l.y2-vm.y);
+        if(Math.min(a,b)>70)return;
+        const red=/^#c0392b$/i.test(l.color||''),near1=a<b;
+        /* cable rojo: del voltímetro al electrodo (cátodo); el otro: del electrodo (ánodo) al voltímetro */
+        const fromVm=red,toEnd=fromVm?near1:!near1;
+        if(red)cat={x:near1?l.x2:l.x1,y:near1?l.y2:l.y1};
+        for(let k=0;k<4;k++){const t=(ph+k/4)%1,p=qpt(l,toEnd?t:1-t);s+=dot(p.x,p.y,2.6,'#ffd54a',.95,1)}
+      });
+      const A=wpt(pu,'legA'),B=wpt(pu,'legB');
+      const pts=[wptRaw(pu,-46,-34),wptRaw(pu,-46,20),wptRaw(pu,-38,27),wptRaw(pu,38,27),wptRaw(pu,46,20),wptRaw(pu,46,-34)];
+      const left=Math.hypot(pts[0].x-(cat?cat.x:pts[0].x),pts[0].y-(cat?cat.y:pts[0].y))<Math.hypot(pts[5].x-(cat?cat.x:pts[5].x),pts[5].y-(cat?cat.y:pts[5].y));
+      for(let k=0;k<3;k++){
+        const t=(ph+k/3)%1,o=fade(t)*.95,c=walk(pts,left?t:1-t,false),n=walk(pts,left?1-(t+.17)%1:(t+.17)%1,false);
+        s+=dot(c.x,c.y,3,'#e8685f',o,1)+dot(n.x,n.y,3,'#4f8fdc',o,1);
+      }
+    }
+  }
+  /* electrólisis: burbujas en el ánodo y migración o depósito en el cátodo */
+  {
+    const fu=its.find(i=>i.def==='fuente'&&i.fill>.05),bk=fu&&its.find(i=>i.def==='beaker'&&i.el&&i.fill>.05);
+    if(bk){
+      const ly=ELY[bk.el]||ELY.h2o;if(fu.fill*12>=ly.vmin){
+        const d=DEFS.beaker,bb=worldBBox(bk),y0=d.y0,y1=d.y1,surf=bk.y+(y1-bk.fill*(y1-y0))*bk.s;
+        const wires=doc.items.filter(l=>l.def==='__line'&&l.arrow==='none'&&/^#c0392b$/i.test(l.color||''));
+        its.filter(e=>e.def==='electrodo'&&inB({x:e.x,y:e.y},bb,30)).forEach(e=>{
+          const tip=wptRaw(e,0,66),top=wptRaw(e,0,-90);if(tip.y<surf+6)return;
+          const anode=wires.some(l=>Math.min(Math.hypot(l.x1-top.x,l.y1-top.y),Math.hypot(l.x2-top.x,l.y2-top.y))<45);
+          const dep=bk.el==='cuso4',yb=Math.max(surf+4,tip.y-70*e.s);
+          if(anode||!dep){
+            const n=anode?6:(bk.el==='h2o'?9:5),brown=anode&&bk.el==='ki';
+            for(let k=0;k<n;k++){const t=(ph*(1+(k%2))+k/n)%1,x=e.x+((k%3)-1)*5+Math.sin((t+k)*T2)*2,y=lerp(tip.y-8,surf+3,t);
+              s+=dot(x,y,1.6+(k%3)*.5+t*1.2,brown?'#8a5a2b':'#fff',brown?.6:.9*(1-t*.5),1)}
+          }else{
+            for(let k=0;k<5;k++){const t=(ph+k/5)%1,sd=k%2?1:-1,x=e.x+sd*lerp(26,7,t),y=lerp(yb+6,tip.y-12,((k*.37)+.2)%1);
+              s+=dot(x,y,2.1,'#b87333',.9*fade(t),1)}
+          }
+        });
+      }
+    }
+  }
+  /* evaporador rotatorio: el matraz gira, el vapor sube y condensa en el refrigerante */
+  its.filter(i=>i.def==='rotavapor'&&i.fill>.05).forEach(r=>{
+    for(let k=0;k<3;k++){const a=ph*T2+k*T2/3,p=wptRaw(r,-52+19*Math.cos(a),34+9*Math.sin(a));
+      s+=dot(p.x,p.y,2.4*r.s,'#fff',.55+.35*Math.sin(a+1),0)}
+    {const a=-ph*T2*2,p=wptRaw(r,-52+26*Math.cos(a),34+26*Math.sin(a));s+=dot(p.x,p.y,1.8*r.s,'#fff',.5,0)}
+    const path=[[-50,6],[-40,-30],[-34,-52],[10,-80],[40,-98],[52,-80]].map(([x,y])=>wptRaw(r,x,y));
+    for(let k=0;k<4;k++){const t=(ph+k/4)%1,p=walk(path,t,false);s+=dot(p.x,p.y,(2.6+t*2.4)*r.s,'#dfeaf2',.85*fade(t),1)}
+    for(let k=0;k<3;k++){const t=(ph+k/3)%1,p=wptRaw(r,53+Math.sin((t+k)*T2)*2,lerp(-6,32,t));s+=dot(p.x,p.y,2*r.s,'#cfe9f7',.95*fade(t),1)}
+  });
+  /* tubo de Thiele: corrientes de convección del aceite caliente y llama que titila */
+  its.filter(i=>i.def==='mechero'&&i.fill>.05).forEach(m=>{
+    const h=m.fill*72,a=1+.12*Math.sin(ph*T2*3),b=1+.2*Math.sin(ph*T2*5+1),p=wptRaw(m,0,-52-h*.62);
+    s+=`<ellipse cx="${F(p.x)}" cy="${F(p.y)}" rx="${F((5+h*.1)*m.s*a)}" ry="${F(h*.42*m.s*b)}" fill="#fff3c0" fill-opacity=".38"/>`;
+    const q=wptRaw(m,Math.sin(ph*T2*2)*2,-52-h*.95);s+=dot(q.x,q.y,2.2*m.s,'#ffc24d',.5,0);
+    its.filter(t=>t.def==='thiele'&&t.fill>.05&&inB({x:m.x,y:m.y-60*m.s},worldBBox(t),70)).forEach(t=>{
+      const loop=[[25,30],[25,-6],[8,-24],[-7,-8],[-7,40],[8,47]].map(([x,y])=>wptRaw(t,x,y));
+      for(let k=0;k<9;k++){const u=(ph+k/9)%1,z=walk(loop,u,true);s+=dot(z.x,z.y,2.1*t.s,'#fff',.9,1)}
+    });
+  });
+  }
   return s;
 }
 let animOn=false,animT0=0,animRAF=0;
