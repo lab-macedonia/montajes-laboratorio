@@ -62,6 +62,9 @@ button{cursor:pointer}
 .menuwrap{position:relative}
 .menu{position:absolute;top:calc(100% + 6px);left:0;z-index:8;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:4px;min-width:240px;max-width:calc(100vw - 16px)}
 .menu[hidden]{display:none}
+.menu{max-height:calc(100vh - 76px);max-height:calc(100dvh - 76px);overflow-y:auto;overscroll-behavior:contain}
+main.nopal{grid-template-columns:0 minmax(0,1fr) 264px}main.noprops{grid-template-columns:248px minmax(0,1fr) 0}main.nopal.noprops{grid-template-columns:0 minmax(0,1fr) 0}
+main.nopal #palette,main.noprops #props{display:none}
 .menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:9px 10px;border-radius:7px}
 .menu button:hover{background:var(--chip)}
 .menu small{display:block;color:var(--mut);font-size:12px}
@@ -211,6 +214,10 @@ details.cfg summary{cursor:pointer;font-size:13px;color:var(--mut)}
 <body>
 <header class="bar">
   <span class="brand"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="vertical-align:-4px;margin-right:7px;fill:none;stroke:var(--acc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4A1.5 1.5 0 0 0 19.5 19L14 9V3"/><path d="M7.5 15h9" stroke-opacity=".7"/></svg>Lab setups</span><a class="langsw" href="../" hreflang="es" lang="es" title="Versión en español">Español</a>
+  <div class="seg" role="group" aria-label="Panels">
+    <button class="btn tog" id="b-pal" aria-pressed="true" title="Show or hide the parts palette" aria-label="Parts palette"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 4v16"/></svg></button>
+    <button class="btn tog" id="b-prop" aria-pressed="true" title="Show or hide the properties and review panel" aria-label="Properties and review panel"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM15 4v16"/></svg></button>
+  </div>
   <div class="seg" role="group" aria-label="Tools">
     <button class="btn" id="t-select" aria-pressed="true" title="Select and move"><svg viewBox="0 0 24 24"><path d="M5 3l12 7-5 1.5L9.5 17z"/></svg><span class="lbl">Move</span></button>
     <button class="btn" id="t-text" aria-pressed="false" title="Add text"><svg viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg><span class="lbl">Text</span></button>
@@ -907,7 +914,7 @@ function worldBBox(it){
   const [a,b,c,d]=bbOf(it);const s=it.def==='__text'?1:it.s;const r=it.rot*Math.PI/180;
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
   for(const [px,py] of [[a,b],[c,b],[c,d],[a,d]]){
-    const X=px*s,Y=py*s;const wx=it.x+X*Math.cos(r)-Y*Math.sin(r),wy=it.y+X*Math.sin(r)+Y*Math.cos(r);
+    const X=(it.flip?-px:px)*s,Y=py*s;const wx=it.x+X*Math.cos(r)-Y*Math.sin(r),wy=it.y+X*Math.sin(r)+Y*Math.cos(r);
     x0=Math.min(x0,wx);y0=Math.min(y0,wy);x1=Math.max(x1,wx);y1=Math.max(y1,wy);
   }
   return{x0,y0,x1,y1};
@@ -1396,7 +1403,7 @@ function adopt(o){
   if(doc.activity){showPane('review');runCheck()}else if(reviewOpen)runCheck();
 }
 function loadScene(i){adopt(cleanDoc({items:SCENES[i].items()}))}
-function loadAct(i){const a=ACTS[i];adopt(cleanDoc({items:a.items(),activity:a.act}))}
+function loadAct(i){const a=ACTS[i];adopt(cleanDoc({items:a.items(),activity:a.act}));if(window.__showProps)window.__showProps()}
 
 /* ---------- panel de propiedades ---------- */
 const SHOW={glassL:['fill','color','two','f2','color2','hz','rot','scale','label','ghs','flip'],glassF:['fill','rot','scale','label','ghs','flip'],
@@ -2472,7 +2479,18 @@ function layoutAnnot(){
   live.forEach(it=>{
     const n=(it.ghs||[]).filter(c=>has(GHS,c)).length;if(!n||it.go)return;
     let r=null;
-    for(const p of spots(it,36,n*36,true)){const q={x:p.x,y:p.y,w:36,h:n*36,v:true};if(!hit(q,it.id)){r=q;break}}
+    const under=q=>mesas.some(m=>q.y>=m.b.y0&&q.x<m.b.x1&&q.x+q.w>m.b.x0);
+    const sb=worldBBox(it),scx=(sb.x0+sb.x1)/2,scy=(sb.y0+sb.y1)/2,sp=spots(it,36,n*36,true).map((p,i)=>({p,i,d:Math.hypot(p.x+18-scx,p.y+n*18-scy)})).sort((u,v)=>u.d-v.d||u.i-v.i).map(o=>o.p);
+    for(const pad of [10,0]){if(r)break;for(const p of sp){const q={x:p.x,y:p.y,w:36,h:n*36,v:true};if(!hit({x:q.x-pad,y:q.y-pad,w:q.w+2*pad,h:q.h+2*pad},it.id)&&!under(q)){r=q;break}}}
+    if(!r){
+      /* sin hueco en los lugares habituales: busca el sitio libre más cercano alrededor de la pieza */
+      const bb=worldBBox(it),ccx=(bb.x0+bb.x1)/2,ccy=(bb.y0+bb.y1)/2;let best=null;
+      for(const v of [true,false]){const w=v?36:n*36,h=v?n*36:36;
+        for(let dx=-300;dx<=300;dx+=12)for(let dy=-300;dy<=300;dy+=12){
+          const q={x:ccx+dx-w/2,y:ccy+dy-h/2,w,h,v},d=dx*dx+dy*dy+(v?0:400);
+          if((!best||d<best.d)&&!under(q)&&!hit({x:q.x-10,y:q.y-10,w:w+20,h:h+20},it.id))best={q,d}}}
+      if(best)r=best.q;
+    }
     if(r)placed.push(r);else r={...choose(it,n*36,36,false),v:false};
     (annot[it.id]=annot[it.id]||{}).ghs=r;
   });
@@ -3312,6 +3330,15 @@ if(saved){
   try{const o=cleanDoc(JSON.parse(saved));if(o.items.length){doc=o;const s=docSnap();hist=[s];hi=0;started=true;draw();fitContent();syncActivityUI()}}catch(_){}
 }
 if(!started)loadScene(0);
+{
+  const mn=document.querySelector('main'),bp=$('b-pal'),bq=$('b-prop');let st={};
+  try{st=JSON.parse(localStorage.getItem('mlab-paneles')||'{}')||{}}catch(_){st={}}
+  const apply=()=>{mn.classList.toggle('nopal',!!st.pal);mn.classList.toggle('noprops',!!st.prop);
+    bp.setAttribute('aria-pressed',String(!st.pal));bq.setAttribute('aria-pressed',String(!st.prop));
+    try{localStorage.setItem('mlab-paneles',JSON.stringify(st))}catch(_){}};
+  bp.onclick=()=>{st.pal=!st.pal;apply()};bq.onclick=()=>{st.prop=!st.prop;apply()};
+  window.__showProps=()=>{if(st.prop){st.prop=false;apply()}};apply();
+}
 updHist();
 })();
 </script>
