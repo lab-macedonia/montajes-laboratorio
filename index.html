@@ -710,9 +710,9 @@ const DEFS={
    return `<ellipse cx="0" cy="${(-ry*.55).toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" ${st(2,'#f28b82')}/><path d="M-4,${(b+5).toFixed(1)}L4,${(b+5).toFixed(1)}L0,${b.toFixed(1)}Z" ${st(1.6,'#d6403a')}/><path d="M0,${(b+5).toFixed(1)}Q-8,${(b+25).toFixed(1)} 4,${(b+45).toFixed(1)}" ${st(1.4)}/>`}},
  electrodo:{name:'Electrodo metálico',bb:[-12,-92,12,76],colorable:true,color:'#b87333',
   draw:it=>R(-5,-70,10,142,it.color,2)+`<path d="M0,-70L0,-80" ${st(2)}/>`+R(-8,-90,16,12,'#c0392b',2)},
- puente:{name:'Puente salino (tubo en U)',bb:[-60,-50,60,36],y0:-46,y1:30,fill:.85,
-  d:'M-54,-46L-54,20Q-54,30 -44,30L44,30Q54,30 54,20L54,-46M-42,-46L-42,16Q-42,18 -40,18L40,18Q42,18 42,16L42,-46',
-  clip:'M-53,-46L-53,20Q-53,29 -44,29L44,29Q53,29 53,20L53,-46L43,-46L43,16Q43,17 41,17L-41,17Q-43,17 -43,16L-43,-46Z'},
+ puente:{name:'Puente salino (tubo en U)',bb:[-60,-36,60,50],y0:-30,y1:46,fill:.85,
+  d:'M-54,46L-54,-20Q-54,-30 -44,-30L44,-30Q54,-30 54,-20L54,46M-42,46L-42,-16Q-42,-18 -40,-18L40,-18Q42,-18 42,-16L42,46',
+  clip:'M-53,46L-53,-20Q-53,-29 -44,-29L44,-29Q53,-29 53,-20L53,46L43,46L43,-16Q43,-17 41,-17L-41,-17Q-43,-17 -43,-16L-43,46Z'},
  desecador:{name:'Desecador',bb:[-58,-66,58,62],y0:18,y1:57,fill:.5,color:'#e6e0d0',fillLabel:'Cantidad de desecante',
   d:'M-52,-10L-52,50Q-52,58 -44,58L44,58Q52,58 52,50L52,-10',clip:'M-51,18L51,18L51,50Q51,57 44,57L-44,57Q-51,57 -51,50Z',
   deco:`<path d="M-48,16L48,16" ${st(2.5)}/><path d="M-56,-10L56,-10L56,-16Q56,-54 0,-54Q-56,-54 -56,-16Z" ${st(2,'rgba(190,222,240,.25)')}/><path d="M-6,-54L-6,-62L6,-62L6,-54" ${st(2)}/>`}
@@ -1165,7 +1165,7 @@ const sTLC=e=>[
 
 const sDaniell=e=>[
   I('mesa',270,576),I('beaker',202,520,{fill:.6,color:'#2f7fd6'}),I('beaker',298,520,{fill:.6,color:'#9fd3f0'}),
-  I('electrodo',180,480,{color:'#b87333'}),I('electrodo',320,e?400:480,{color:'#aab6bf'}),...when(!e,[I('puente',250,520,{fill:.85,color:'#f5f5f5'})]),
+  I('electrodo',180,480,{color:'#b87333'}),I('electrodo',320,e?400:480,{color:'#aab6bf'}),...when(!e,[I('puente',250,489,{fill:.85,color:'#f5f5f5'})]),
   I('voltimetro',250,330,{fill:.3667}),
   L(228,350,180,394,{w:3,color:'#c0392b',arrow:'none',cx:180,cy:350}),...when(!e,[L(272,350,320,394,{w:3,color:INK,arrow:'none',cx:320,cy:350})]),
   ...when(!e,[T(250,230,'Pila Daniell',26),T(80,470,'Cu(s)\nCuSO4 1 M',15),L(122,478,172,500),T(425,470,'Zn(s)\nZnSO4 1 M',15),L(378,478,328,500),T(250,445,'Puente salino',14)])];
@@ -2712,7 +2712,7 @@ function animSVG(ph){
         for(let k=0;k<4;k++){const t=(ph+k/4)%1,p=qpt(l,toEnd?t:1-t);s+=dot(p.x,p.y,2.6,'#ffd54a',.95,1)}
       });
       const A=wpt(pu,'legA'),B=wpt(pu,'legB');
-      const pts=[wptRaw(pu,-46,-34),wptRaw(pu,-46,20),wptRaw(pu,-38,27),wptRaw(pu,38,27),wptRaw(pu,46,20),wptRaw(pu,46,-34)];
+      const pts=[wptRaw(pu,-48,40),wptRaw(pu,-48,-20),wptRaw(pu,-38,-24),wptRaw(pu,38,-24),wptRaw(pu,48,-20),wptRaw(pu,48,40)];
       const left=Math.hypot(pts[0].x-(cat?cat.x:pts[0].x),pts[0].y-(cat?cat.y:pts[0].y))<Math.hypot(pts[5].x-(cat?cat.x:pts[5].x),pts[5].y-(cat?cat.y:pts[5].y));
       for(let k=0;k<3;k++){
         const t=(ph+k/3)%1,o=fade(t)*.95,c=walk(pts,left?t:1-t,false),n=walk(pts,left?1-(t+.17)%1:(t+.17)%1,false);
