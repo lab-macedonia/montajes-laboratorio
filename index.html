@@ -407,6 +407,9 @@ details.cfg summary{cursor:pointer;font-size:13px;color:var(--mut)}
         <div id="a-fields" hidden>
           <div class="grp"><label for="a-title">Título</label><input type="text" id="a-title" maxlength="120"></div>
           <div class="grp"><label for="a-goal">Instrucción para el estudiante</label><textarea id="a-goal" rows="3" maxlength="600"></textarea></div>
+          <div class="grp"><label for="a-curso">Curso (opcional)</label><select id="a-curso"><option value=""> — </option><option value="7.º básico">7.º básico</option><option value="8.º básico">8.º básico</option><option value="1.º medio">1.º medio</option><option value="2.º medio">2.º medio</option><option value="3.º–4.º medio">3.º–4.º medio</option><option value="Educación superior">Educación superior</option></select></div>
+          <div class="grp"><label for="a-oa">Objetivo de aprendizaje (OA)</label><input type="text" id="a-oa" maxlength="140" placeholder="Ej.: OA 14 (verifica en curriculumnacional.cl)"></div>
+          <div class="grp"><label for="a-hab">Habilidades de investigación</label><input type="text" id="a-hab" maxlength="140" placeholder="Ej.: OA d, OA k"></div>
           <div class="grp"><label for="a-mode">Tipo</label><select id="a-mode"><option value="errores">Encontrar y corregir errores</option><option value="armar">Armar desde cero</option></select></div>
           <div class="grp"><label for="a-type">Lista de piezas requeridas</label><select id="a-type"></select></div>
           <div class="grp"><label for="a-cdef">Piezas requeridas adicionales</label>
@@ -1387,10 +1390,13 @@ const ACTS=[
   act:{title:'Arma una titulación potenciométrica',goal:'Monta una titulación con pH-metro: bureta sujeta, vaso sobre la placa con barra agitadora y electrodo sumergido sin tocar el fondo.',type:'potenciometrica',mode:'armar',student:false}}
 ];
 
+/* sugerencia de vínculo curricular (editable por el docente; verifica la vigencia de los OA en curriculumnacional.cl) */
+const CUR_SUG={'destilacion': ['7.º básico', 'OA 14 (separación de mezclas: destilación)'], 'filtracion': ['7.º básico', 'OA 14 (separación de mezclas: filtración)'], 'gravedad': ['7.º básico', 'OA 14 (separación de mezclas: filtración)'], 'titulacion': ['2.º medio', 'OA 15 (soluciones y su concentración)']},HAB_SUG={'errores': 'OA k: evaluar la investigación para perfeccionarla', 'armar': 'OA d: planificar la investigación, seleccionando instrumentos y materiales'};
+ACTS.forEach(a=>{const c=CUR_SUG[a.act.type];if(c&&!a.act.curso){a.act.curso=c[0];a.act.oa=c[1];a.act.hab=HAB_SUG[a.act.mode==='armar'?'armar':'errores']||''}});
 function cleanAct(a){
   if(!a||typeof a!=='object')return null;
   const s=(v,n)=>String(v==null?'':v).slice(0,n);
-  return{title:s(a.title,120),goal:s(a.goal,600),type:typeof a.type==='string'&&has(PRESETS,a.type)?a.type:'',mode:a.mode==='armar'?'armar':'errores',student:!!a.student,exam:!!a.exam,exig:clamp(Math.round(num(a.exig,60)),30,90),hp:clamp(Math.round(num(a.hp,5)),0,50),maxr:clamp(Math.round(num(a.maxr,0)),0,99),
+  return{title:s(a.title,120),goal:s(a.goal,600),type:typeof a.type==='string'&&has(PRESETS,a.type)?a.type:'',curso:s(a.curso,40),oa:s(a.oa,140),hab:s(a.hab,140),mode:a.mode==='armar'?'armar':'errores',student:!!a.student,exam:!!a.exam,exig:clamp(Math.round(num(a.exig,60)),30,90),hp:clamp(Math.round(num(a.hp,5)),0,50),maxr:clamp(Math.round(num(a.maxr,0)),0,99),
     rules:(Array.isArray(a.rules)?a.rules:[]).slice(0,12).filter(r=>r&&has(DEFS,r.a)&&has(DEFS,r.b)&&['need','forbid','near','below','conn'].includes(r.k)).map(r=>({
       a:r.a,b:r.b,k:r.k,v:clamp(Math.round(num(r.v,r.k==='near'?120:1)),1,2000),c:['has','fgt','flt'].includes(r.c)?r.c:'has',cv:clamp(Math.round(num(r.cv,50)),0,100),
       msg:String(r.msg||'').slice(0,120),why:String(r.why||'').slice(0,300)})),
@@ -2337,7 +2343,7 @@ function syncActivityUI(){
   if(a){
     if(document.activeElement!==$('a-title'))$('a-title').value=a.title;
     if(document.activeElement!==$('a-goal'))$('a-goal').value=a.goal;
-    $('a-mode').value=a.mode;$('a-type').value=a.type;$('a-stu').checked=a.student;$('a-exam').checked=!!a.exam;$('a-exfields').hidden=!a.exam;$('a-exig').value=a.exig==null?60:a.exig;$('a-hp').value=a.hp==null?5:a.hp;$('a-maxr').value=a.maxr||0;
+    $('a-curso').value=a.curso||'';if(document.activeElement!==$('a-oa'))$('a-oa').value=a.oa||'';if(document.activeElement!==$('a-hab'))$('a-hab').value=a.hab||'';$('a-mode').value=a.mode;$('a-type').value=a.type;$('a-stu').checked=a.student;$('a-exam').checked=!!a.exam;$('a-exfields').hidden=!a.exam;$('a-exig').value=a.exig==null?60:a.exig;$('a-hp').value=a.hp==null?5:a.hp;$('a-maxr').value=a.maxr||0;
   }
   if(!doc.items.length&&!a)$('empty').hidden=false;
 }
@@ -2359,6 +2365,10 @@ function actEdit(fn,live){
 $('a-on').onchange=e=>{doc.activity=e.target.checked?cleanAct({title:'',goal:'',mode:'errores',student:false}):null;commit();syncActivityUI();renderReview()};
 $('a-title').addEventListener('input',e=>actEdit(a=>{a.title=e.target.value.slice(0,120)},true));
 $('a-goal').addEventListener('input',e=>actEdit(a=>{a.goal=e.target.value.slice(0,600)},true));
+$('a-curso').addEventListener('change',e=>actEdit(a=>{a.curso=e.target.value.slice(0,40)},true));
+$('a-oa').addEventListener('input',e=>actEdit(a=>{a.oa=e.target.value.slice(0,140)},true));
+$('a-hab').addEventListener('input',e=>actEdit(a=>{a.hab=e.target.value.slice(0,140)},true));
+['a-curso','a-oa','a-hab'].forEach(id=>$(id).addEventListener('change',()=>commit()));
 $('a-title').addEventListener('change',()=>commit());
 $('a-goal').addEventListener('change',()=>commit());
 $('a-mode').onchange=e=>actEdit(a=>{a.mode=e.target.value==='armar'?'armar':'errores'});
@@ -2943,22 +2953,29 @@ function parseReports(txt){
   });
   return{out,bad};
 }
+const curOf=r=>(r.doc&&r.doc.activity)||{};
+const curTag=r=>{const q=curOf(r);return(q.curso||q.oa||q.hab)?`<p class="small">${esc([q.curso,q.oa].filter(Boolean).join(' · '))}${q.hab?' — '+esc(q.hab):''}</p>`:''};
+function curSummary(){
+  const m=new Map();reps.forEach(r=>{const q=curOf(r);const k=[q.curso,q.oa].filter(Boolean).join(' · ');if(!k)return;const o=m.get(k)||{n:0,ok:0};o.n++;if(r.done)o.ok++;m.set(k,o)});
+  if(!m.size)return'';
+  return`<h3>Logro por OA</h3><div class="tw"><table><thead><tr><th>Curso · OA</th><th>Entregas</th><th>Lograron el montaje</th></tr></thead><tbody>${[...m].map(([k,o])=>`<tr><td>${esc(k)}</td><td>${o.n}</td><td>${o.ok} (${pct(o.ok,o.n)} %)</td></tr>`).join('')}</tbody></table></div>`;
+}
 function renderReports(){
   const by=new Map();reps.forEach((r,i)=>{r.i=i;(by.get(r.title)||by.set(r.title,[]).get(r.title)).push(r)});
-  let h='';
+  let h=curSummary();
   for(const [title,list] of by){
     const n=list.length,ok=list.filter(r=>r.done).length;
     const freq=new Map();
     list.forEach(r=>Object.keys(r.fails).forEach(t=>{const f=freq.get(t)||{s:0,p:0,c:0};f.s++;f.c+=r.fails[t];if(r.last.includes(t))f.p++;freq.set(t,f)}));
     const top=[...freq].sort((a,b)=>b[1].s-a[1].s||b[1].c-a[1].c).slice(0,8);
-    h+=`<h3>${esc(title)}</h3><p class="small">${n} ${n===1?'entrega':'entregas'} · ${ok} lograron el montaje correcto (${pct(ok,n)} %) · mediana de ${median(list.map(r=>r.runs))} ${median(list.map(r=>r.runs))===1?'revisión':'revisiones'} · ${list.filter(r=>r.peek).length} vieron las respuestas · ${list.filter(r=>r.hints>0).length} pidieron pistas · nota promedio ${String((list.reduce((t,r)=>t+scoreOf(r).nota,0)/n).toFixed(1)).replace('.',',')}</p>`;
+    h+=`<h3>${esc(title)}</h3>${curTag(list[0])}<p class="small">${n} ${n===1?'entrega':'entregas'} · ${ok} lograron el montaje correcto (${pct(ok,n)} %) · mediana de ${median(list.map(r=>r.runs))} ${median(list.map(r=>r.runs))===1?'revisión':'revisiones'} · ${list.filter(r=>r.peek).length} vieron las respuestas · ${list.filter(r=>r.hints>0).length} pidieron pistas · nota promedio ${String((list.reduce((t,r)=>t+scoreOf(r).nota,0)/n).toFixed(1)).replace('.',',')}</p>`;
     if(top.length)h+=`<p class="lab">Errores en que más se atascaron (estudiantes que los tuvieron)</p><ul class="bars">${top.map(([t,f])=>`<li><span>${esc(t)}</span><span class="pb"><i style="width:${pct(f.s,n)}%"></i></span><b>${f.s}/${n}</b><small>${f.p?f.p+' sin resolver':'todos resueltos'}</small></li>`).join('')}</ul>`;
     h+=`<div class="tw"><table><thead><tr><th>Nombre</th><th>Resultado</th><th>Puntaje</th><th>Nota</th><th>Revisiones</th><th>Pistas</th><th>Vio resp.</th><th>Min</th><th></th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.name)}</td><td>${r.done?'Logrado':(r.last.length?r.last.length+' pendiente'+(r.last.length>1?'s':''):(r.runs?'Sin cerrar':'No revisó'))}</td><td>${scoreOf(r).p} %</td><td><b>${String(scoreOf(r).nota.toFixed(1)).replace('.',',')}</b></td><td>${r.runs}</td><td>${r.hints}</td><td>${r.peek?'Sí':'No'}</td><td>${r.min}</td><td><button type="button" class="btn line" data-open="${r.i}">Ver dibujo</button></td></tr>`).join('')}</tbody></table></div>`;
   }
   $('rp-out').innerHTML=h||'<p class="small">Aún no hay entregas cargadas.</p>';
   ['rp-copy','rp-csv'].forEach(id=>$(id).disabled=!reps.length);
 }
-const repRows=()=>[['Actividad','Nombre','Resultado','Puntaje (%)','Nota','Revisiones','Pistas','Vio respuestas','Minutos activos','Errores pendientes']].concat(reps.map(r=>[r.title,r.name,r.done?'Logrado':'No logrado',scoreOf(r).p,String(scoreOf(r).nota.toFixed(1)).replace('.',','),r.runs,r.hints,r.peek?'Sí':'No',String(r.min).replace('.',','),r.last.join(' | ')]));
+const repRows=()=>[['Actividad','Curso','OA','Habilidades','Nombre','Resultado','Puntaje (%)','Nota','Revisiones','Pistas','Vio respuestas','Minutos activos','Errores pendientes']].concat(reps.map(r=>{const q=(r.doc&&r.doc.activity)||{};return[r.title,q.curso||'',q.oa||'',q.hab||'',r.name,r.done?'Logrado':'No logrado',scoreOf(r).p,String(scoreOf(r).nota.toFixed(1)).replace('.',','),r.runs,r.hints,r.peek?'Sí':'No',String(r.min).replace('.',','),r.last.join(' | ')]}));
 $('rp-files').onchange=async e=>{
   const fs=[...e.target.files].slice(0,200);let t=$('rp-in').value.trim();
   for(const f of fs){if(f.size>4e6)continue;try{t+='\n'+(await f.text()).trim()}catch(_){}}
